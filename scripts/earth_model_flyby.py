@@ -6,62 +6,97 @@ from precomputed spacecraft trajectories. Results are deterministic
 given identical inputs.
 """
 
+import sys
+import argparse
+import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from matplotlib.colors import ListedColormap
 import matplotlib.ticker as ticker
 import csv
-from get_land_fraction import land_fraction_fibonacci
 from pathlib import Path
+from get_land_fraction import land_fraction_fibonacci
 
+ALL_FLYBYS = ("GALILEO", "ROSETTA_2005", "NEAR", 
+              "MESSENGER", "CASSINI", "ROSETTA_2009", "JUNO", 
+                "GALILEO_2", "ROSETTA_2007"),
+
+# default config
 CONFIG = {
-    "mode": "show_maps",
-    # "visualize_trajectory", "record_coupling_constants",
-    # "run_plateau_test", "run_drift_test", "run_window_dependence_test"
+
+    # main parameters
+
+    "mode": "construct_land_fraction_map",
+    # "visualize_trajectory", "record_coupling_values",
+    # "run_saturation_test", "run_drift_test", "run_window_test"
     # "construct_land_fraction_map", "show_maps"
 
     "weighting_function": "inverse_r_squared", 
     #"none", "inverse_r", "inverse_r_squared", "inverse_r_cubed", "inverse_r_surface", "inverse_r_surface_squared", 
-    
-    "flybys": ("GALILEO", "JUNO"),
-    #("GALILEO","ROSETTA_2005", "NEAR", "MESSENGER", "CASSINI", "ROSETTA_2009", "JUNO", 
-    # "GALILEO_2", "ROSETTA_2007"),
 
-    "max_distance_for_visualizing_and_recording_coupling_constants": 2e4,
-    
-    "plateau_test_max_distances": (1.0e4, 2.0e4, 5.0e4),
-    # (1.0e4, 2.0e4, 5.0e4, 1.0e5, 2.0e5, 5.0e5),
+    # land fraction map parameters
+    "fraction_map_degree_resolution": 5.0,
+    "fraction_map_distance": 2.0e4, # km
 
+    # trajectory_visualization
+    "trajectory_visualization_flybys": ("GALILEO","JUNO"),   
+    "trajectory_visualization_distance_km": 2.0e4,
+
+    # recording coupling values
+    "coupling_value_test_flybys": ALL_FLYBYS,   
+    "coupling_value_test_distance_km": 2.0e4,
+
+    # saturation test
+    "saturation_test_flybys": ALL_FLYBYS,   
+    "saturation_test_plateau_km": 2.0e5, 
+
+    # window test
+    "window_test_flybys": ALL_FLYBYS,   
     "window_test_phi_offsets": 36,
-    "window_test_max_distance": 2e5, # km
+    "window_test_distance": 2.0e5, # km
 
-    "fraction_map_degree_resolution": 1,
-    "fraction_map_distance": 2e4, # km
-    "fraction_map_path": "data_surface/cache/projected_land_fraction.npz",
+    # drift test
+    "drift_test_flybys": ALL_FLYBYS,   
+    "drift_test_plateau_km": 2.0e5,
+    "drift_test_max_r_km": 5.0e5,
 
+    # trajectory data parameters
+    "delta_t": 10,
+
+    # debug
     "normalization": True,
     "ignore_r_for_land_fraction": False,
 
+    # filepaths
     "output_dir" : "results",
-
-    "delta_t": 10,
+    "fraction_map_path": "data_surface/cache/projected_land_fraction.npz",
     "landmask_path": "data_surface/cache/landmask_cache_1deg.npz",
-
-    "all_flybys": ("GALILEO","ROSETTA_2005", "NEAR", "MESSENGER", "CASSINI", "ROSETTA_2009", "JUNO", 
-                  "GALILEO_2", "ROSETTA_2007"),
-
-    "plateau_r_km": 2e5,
-    "maximum_r_km": 5e5
 }
+
+def parse_args():
+    p = argparse.ArgumentParser(
+        description="Earth flyby land–sea coupling analysis"
+    )
+    p.add_argument(
+        "--config",
+        help="YAML configuration file (e.g. config/window_test.yml)",
+    )
+    return p.parse_args()
+
+def load_config(path: str) -> dict:
+    with open(path, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f) or {}
+    # cfg should override defaults (rightmost overwrites)
+    return {**CONFIG, **cfg}
 
 def construct_map():
     Path(CONFIG["fraction_map_path"]).parent.mkdir(parents=True, exist_ok=True)
 
     print(f"Building projected land fraction map")
 
-    r_km = CONFIG["fraction_map_distance"]
-    delta_d = CONFIG["fraction_map_degree_resolution"]
+    r_km = float(CONFIG["fraction_map_distance"])
+    delta_d = float(CONFIG["fraction_map_degree_resolution"])
 
     phi_values = np.deg2rad(np.arange(-180, 181, delta_d))  # 0–360 degrees
     theta_values = np.deg2rad(np.arange(0, 181, delta_d))  # 0–180 degrees
@@ -223,7 +258,11 @@ def get_path_based_asymmetry(weighted_land_fractions, time_array):
     side_difference = left_sum - right_sum
     side_sum = left_sum + right_sum
 
-    normalized_difference = side_difference / side_sum
+    # Prevent zero division
+    if side_sum != 0:
+        normalized_difference = side_difference / side_sum
+    else:
+        normalized_difference = 0
 
     if CONFIG["normalization"]:
         return normalized_difference
@@ -277,9 +316,9 @@ def get_coupling_values_for_distance_array(trajectory_data, max_distance_array):
     coupling_value_array = np.asarray(coupling_value_array)
     return coupling_value_array
 
-def show_coupling_value():
-    flyby_crafts = CONFIG["flybys"]
-    max_distance = CONFIG["max_distance_for_visualizing_and_recording_coupling_constants"]
+def record_coupling_values():
+    flyby_crafts = CONFIG["coupling_value_test_flybys"]
+    max_distance = float(CONFIG["coupling_value_test_distance_km"])
     
     outdir = Path(CONFIG["output_dir"])
     outdir.mkdir(exist_ok=True)
@@ -302,30 +341,44 @@ def show_coupling_value():
             })
 
         print(craft, coupling_value)
-    
-    if CONFIG["mode"] == "record_coupling_constants":
-        with open(csv_output_filepath, "w", newline="") as f:
-            writer = csv.DictWriter(
-                f,
-                fieldnames=[
-                    "craft",
-                    "max_distance_km",
-                    "coupling_value"
-                ],
-            )
-            writer.writeheader()
-            writer.writerows(results)
+   
+    with open(csv_output_filepath, "w", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "craft",
+                "max_distance_km",
+                "coupling_value"
+            ],
+        )
+        writer.writeheader()
+        writer.writerows(results)
 
-        print(f"Saved results to {csv_output_filepath}")
+    print(f"Saved results to {csv_output_filepath}")
+
+def visualize_trajectory_main():
+    flyby_crafts = CONFIG["trajectory_visualization_flybys"]
+    max_distance = float(CONFIG["trajectory_visualization_distance_km"])
+    
+    weighting_function = CONFIG["weighting_function"]
+
+    for craft in flyby_crafts:
+        print(f"Analyzing {craft}")
+        craft_data = np.load(f"data/parsed/{craft}.npz", allow_pickle=True)
+        trajectory_data = craft_data["trajectory"].item()
+        
+        coupling_value = get_coupling_value(trajectory_data, max_distance)
+
+        print(craft, coupling_value)
 
 def run_drift_test():
     
-    all_flybys = CONFIG["all_flybys"]
+    all_flybys = CONFIG["drift_test_flybys"]
 
     weighting_function = CONFIG["weighting_function"]
 
-    drift_left_endpoint = CONFIG["plateau_r_km"]
-    drift_right_endpoint = CONFIG["maximum_r_km"]
+    drift_left_endpoint = float(CONFIG["drift_test_plateau_km"])
+    drift_right_endpoint = float(CONFIG["drift_test_max_r_km"])
 
     max_distance_array = (drift_left_endpoint, drift_right_endpoint)
     
@@ -358,17 +411,18 @@ def run_drift_test():
             "percent_change_across_range": percent_change
             }) 
         
-        absolute_average_percent_change = np.mean(np.abs(np.asarray(percent_change_array)))
-        drift_results.append({
-            "craft": "Absolute average",
-            "plateau_cutoff": drift_left_endpoint,
-            "maximum_r": drift_right_endpoint,
-            "coupling_value_at_plateau_cutoff": coupling_value_array[0],
-            "coupling_value_at_r_max": coupling_value_array[1],
-            "percent_change_across_range": absolute_average_percent_change
-            }) 
-        
         print(f"Acquired drift for {craft}") 
+
+    absolute_average_percent_change = np.mean(np.abs(np.asarray(percent_change_array)))
+
+    drift_results.append({
+    "craft": "Absolute average",
+    "plateau_cutoff": drift_left_endpoint,
+    "maximum_r": drift_right_endpoint,
+    "coupling_value_at_plateau_cutoff": coupling_value_array[0],
+    "coupling_value_at_r_max": coupling_value_array[1],
+    "percent_change_across_range": absolute_average_percent_change
+    }) 
 
     with open(csv_output_filepath_drift, "w", newline="") as f:
         writer = csv.DictWriter(
@@ -387,17 +441,15 @@ def run_drift_test():
 
     print(f"Saved results to {csv_output_filepath_drift}")
 
-def run_plateau_test():
+def run_saturation_test():
 
-    all_flybys = CONFIG["all_flybys"]
+    all_flybys = CONFIG["saturation_test_flybys"]
 
     positive_main = ("GALILEO", "NEAR", "ROSETTA_2005")          # 3 main positive
     positive_uncertain = ("ROSETTA_2007", "GALILEO_2")            # 2 uncertain positive
     negative_flybys = ("JUNO", "ROSETTA_2009", "MESSENGER", "CASSINI")  # 4 negative
 
     weighting_function = CONFIG["weighting_function"]
-
-    #max_distance_array = CONFIG["plateau_test_max_distances"]
 
     max_distance_array = np.unique(np.concatenate([
         np.logspace(np.log10(1e4), np.log10(1.5e5), 20),
@@ -420,11 +472,11 @@ def run_plateau_test():
     for ax in axes:
         ax.set_xscale("log")
         ax.grid(True, which="both", linewidth=0.6, alpha=0.35)
-        ax.axvline(CONFIG["plateau_r_km"], linestyle="--", linewidth=1.2)
+        ax.axvline(float(CONFIG["saturation_test_plateau_km"]), linestyle="--", linewidth=1.2)
         ax.set_ylabel("Coupling proxy $C(r_{\\max})$")
     axes[-1].set_xlabel("Integration boundary $r_{\\max}$ (km)")
 
-    axes[0].set_title("Positive-$C$ flybys (including uncertain positives)")
+    axes[0].set_title("Positive-$C$ flybys")
     axes[1].set_title("Negative-$C$ flybys")
 
     colors = plt.get_cmap("tab10").colors
@@ -434,8 +486,7 @@ def run_plateau_test():
 
         craft_data = np.load(f"data/parsed/{craft}.npz", allow_pickle=True)
         trajectory_data = craft_data["trajectory"].item()
-        #trajectory_data = sparsify_indices(trajectory_data)
-
+        
         coupling_value_array = get_coupling_values_for_distance_array(trajectory_data, max_distance_array)
         
         for distance_index, max_distance in enumerate(max_distance_array):
@@ -457,7 +508,6 @@ def run_plateau_test():
             axes[1].plot(max_distance_array_x, coupling_value_array, color=color, label=craft, linestyle="-", linewidth=2.0, alpha=0.95)
         
         print(f"Processed {craft}")
-        #plt.plot(max_distance_array, coupling_value_array, color=colors[i % 10])   
 
     for ax in axes:
         ax.legend(loc="best", fontsize="medium", frameon=True, ncol=2)
@@ -465,7 +515,7 @@ def run_plateau_test():
     # Optional: annotate the cutoff line
     axes[0].annotate(
         r"chosen cutoff $2\times10^5$ km",
-        xy=(CONFIG["plateau_r_km"], 0.98),
+        xy=(float(CONFIG["saturation_test_plateau_km"]), 0.98),
         xycoords=("data", "axes fraction"),
         xytext=(6, -8),
         textcoords="offset points",
@@ -501,11 +551,11 @@ def run_window_dependence_test():
 
     csv_output_filepath = Path(outdir, f"window_dependence_weighting_{weighting_function}.csv")
 
-    flyby_crafts = CONFIG["flybys"]
+    flyby_crafts = CONFIG["window_test_flybys"]
 
-    max_distance_selection = CONFIG["window_test_max_distance"]
+    max_distance_selection = float(CONFIG["window_test_max_distance"])
 
-    offset_total = CONFIG["window_test_phi_offsets"]
+    offset_total = int(CONFIG["window_test_phi_offsets"])
     offset_unit = 2*np.pi/offset_total
 
     all_coupling_signs = []
@@ -568,28 +618,46 @@ def run_window_dependence_test():
     print(f"Saved results to {csv_output_filepath}")
 
 def main():
-    
+    args = parse_args()
+
+    if args.config is None:
+        print(
+            "WARNING: No configuration file specified.\n"
+            "Please run with: --config name",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    config_path = Path("config", f"{args.config}.yml").resolve()
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config not found: {config_path}")
+
+    global CONFIG
+    CONFIG = load_config(str(config_path))
+    print(f"Using config: {config_path}")
+        
     if CONFIG["mode"] == "visualize_trajectory":
         print("Running trajectory visualization mode")
         if not Path(CONFIG["fraction_map_path"]).exists():
-            raise FileNotFoundError("Projected land fraction map not found. Run construct_map() first.")
-        show_coupling_value()
-    elif CONFIG["mode"] == "record_coupling_constants":
-        show_coupling_value()
+            raise FileNotFoundError("Land fraction map not found. Run generate_weighted_map first.")
+        visualize_trajectory_main()
+    elif CONFIG["mode"] == "record_coupling_values":
+        print("Calculating coupling values")
+        record_coupling_values()
     elif CONFIG["mode"] == "show_maps":
         if not Path(CONFIG["fraction_map_path"]).exists():
-            raise FileNotFoundError("Projected land fraction map not found. Run construct_map() first.")
+            raise FileNotFoundError("Land fraction map not found. Run generate_weighted_map first.")
         
         show_maps()
     elif CONFIG["mode"] == "construct_land_fraction_map":
         construct_map()
-    elif CONFIG["mode"] == "run_plateau_test":  
+    elif CONFIG["mode"] == "run_saturation_test":  
         print("Running saturation test")
-        run_plateau_test()
+        run_saturation_test()
     elif CONFIG["mode"] == "run_drift_test":  
         print("Running drift test")
         run_drift_test()
-    elif CONFIG["mode"] == "run_window_dependence_test":  
+    elif CONFIG["mode"] == "run_window_test":  
         print("Running window test")
         run_window_dependence_test()
     else:
