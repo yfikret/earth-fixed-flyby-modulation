@@ -1,56 +1,113 @@
-## Data and Reproducibility
+# Earth Flyby Land–Sea Coupling Analysis
 
+This project computes Earth-fixed land–sea coupling metrics from precomputed spacecraft trajectories. It is designed to explore potential correlations between reported spacecraft Earth flyby anomalies and the distribution of land versus ocean visible from the spacecraft in an Earth-fixed frame.
 
-### Surface Geography Data
+## Code Overview
 
-Ocean/land geometry is based on the Natural Earth dataset:
+- `fetch_kernels.py`  
+  Downloads and verifies the required planetary ephemeris and spacecraft SPICE kernels from NASA NAIF.
 
-* **Dataset**: Natural Earth — 110m Land
-* **File**: `ne_110m_ocean.*`
-* **Source**: [https://www.naturalearthdata.com/downloads/110m-physical-vectors/110m-land/](https://www.naturalearthdata.com)
-* **License**: Public domain
+- `parse_trajectory_data.py`  
+  Extracts and caches spacecraft position and velocity features from SPICE kernels into compressed `.npz` files.
 
-The extracted shapefile is included directly in the repository under:
+- `build_landmask.py`  
+  Converts Natural Earth vector geography data into a binary land–ocean mask on a regular latitude–longitude grid.
 
-```
-data_surface/ne_110m_land/
-```
+- `get_land_fraction.py`  
+  Contains the core mathematical routines for computing visible land fraction. The visible Earth disk is sampled deterministically using a **Fibonacci (golden-angle) lattice** projected onto the Earth’s surface from the spacecraft’s viewpoint.
 
-This dataset is small (~100 KB) and is vendored to allow the code to run out-of-the-box.
+- `run_experiment.py`  
+  **Main control interface.** Orchestrates analyses, visualizations, and statistical tests (e.g., saturation, drift, window dependence) based on a user-specified YAML configuration file.
 
-### Spacecraft Trajectory and Ephemeris Data
+## Installation & Requirements
 
-Spacecraft trajectories and planetary ephemerides are provided via SPICE kernels obtained from NASA NAIF.
-Due to their size (~117 MB total), these kernels are **not included** in the repository.
+### Environment Preparation
 
-Instead, exact kernel URLs and SHA256 checksums are recorded in:
+This project has been written and tested for **Python 3.12.2**.
 
-```
-data/manifest.yml
-```
+Install required packages:
+```bash
+pip install -r requirements.txt
+````
 
-A helper script is provided to download and verify all required kernels:
+Core dependencies include:
+`pyyaml`, `numpy`, `matplotlib`, `spiceypy`, `shapely`, `fiona`
+
+### Preparing Trajectory Data
+
+Download and verify all required SPICE kernels:
 
 ```bash
 python scripts/fetch_kernels.py
 ```
 
-This script retrieves the kernels from NAIF, verifies their checksums, and places them in the expected directory structure under:
+Parse and cache spacecraft trajectory features:
+
+```bash
+python scripts/parse_trajectory_data.py
+```
+
+### Geographic Data
+
+Prepare the land–ocean mask cache:
+
+```bash
+python scripts/build_landmask.py
+```
+
+### Running Analyses
+
+All analyses are controlled via explicit YAML configuration files.
+
+Run an experiment with:
+
+```bash
+python scripts/run_experiment.py --config <name>
+```
+
+Each configuration file specifies parameters such as:
+
+* analysis mode (e.g., window test, saturation test)
+* distance weighting
+* flyby selection
+* distance range
+
+Experimental configurations are provided under `config/`.
+
+Examples:
+```bash
+python scripts/run_experiment.py --config generate_cached_map
+
+python scripts/run_experiment.py --config window_test
+```
+
+> **Note:** Certain visualization modes require generating cached maps first, as specified in the corresponding configuration files.
+
+## Data and Reproducibility
+
+### Surface Geography Data
+
+Geographic data is provided by the Natural Earth dataset.
+
+* **Source:** [https://www.naturalearthdata.com/downloads/110m-physical-vectors/110m-land/](https://www.naturalearthdata.com/downloads/110m-physical-vectors/110m-land/)
+* **License:** Public domain
+
+This dataset is small (~100 KB) and is vendored in full with the repository.
+
+### Spacecraft Trajectory and Ephemeris Data
+
+Spacecraft trajectories and planetary ephemerides are provided via SPICE kernels obtained from NASA NAIF. Due to their size (~117 MB total), these kernels are **not included** in the repository.
+
+The exact kernel URLs and SHA256 checksums are recorded in:
+
+```
+data/manifest.yml
+```
+
+The script `fetch_kernels.py` retrieves the kernels from NAIF, verifies their checksums, and places them in the expected directory structure under:
 
 ```
 data/kernels/
 ```
 
-### SPICE Configuration
-
-SPICE kernels are loaded via a metakernel (`.tm`) file using relative paths.
-The code has been tested with Python 3.12.2 and standard scientific Python packages.
-
-### Trajectory Feature Generation
-
-Spacecraft trajectory features are generated using SPICE kernels via parse_trajectory_data.py.
-Inputs: NAIF SPICE kernels (see data/manifest.yml).
-Outputs: compressed .npz files containing spherical position/velocity features in the Earth-fixed frame.
-Parameters: 
-
-DT = 10 s, 
+All reported results are deterministic given identical kernels, surface data, and configuration files.
