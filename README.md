@@ -47,14 +47,6 @@ Parse and cache spacecraft trajectory features:
 python scripts/parse_trajectory_data.py
 ```
 
-### Geographic Data
-
-Prepare the land–ocean mask cache:
-
-```bash
-python scripts/build_landmask.py
-```
-
 ### Running Analyses
 
 All analyses are controlled via explicit YAML configuration files.
@@ -76,12 +68,8 @@ Experimental configurations are provided under `config/`.
 
 Examples:
 ```bash
-python scripts/run_experiment.py --config generate_cached_map
-
-python scripts/run_experiment.py --config window_test
+python scripts/run_experiment.py --config visualize_trajectory
 ```
-
-> **Note:** Certain visualization modes require generating cached maps first, as specified in the corresponding configuration files.
 
 ## Data and Reproducibility
 

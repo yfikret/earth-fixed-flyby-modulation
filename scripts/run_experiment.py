@@ -129,7 +129,7 @@ def show_maps():
 
     # --- Global Styling ---
     plt.rcParams.update({'font.size': 11, 'font.family': 'serif'})
-    fig, ax = plt.subplots(figsize=(5, 5), dpi=100)
+    fig, ax = plt.subplots(figsize=(8, 5), dpi=100)
     extent = [lon_vals.min(), lon_vals.max(), lat_vals.min(), lat_vals.max()]
 
     # --- Subplot 1: Continuous Data (Land Fraction) ---
@@ -151,7 +151,7 @@ def show_maps():
     
     binary_cmap = ListedColormap(["#211347", "#c2df20"]) 
     
-    fig, ax = plt.subplots(figsize=(5, 5), dpi=100)
+    fig, ax = plt.subplots(figsize=(8, 5), dpi=100)
     im2 = ax.imshow(landmask, extent=extent, cmap=binary_cmap, origin='upper')
     #ax.set_title("Binary Landmask", fontsize=20, fontweight='bold')
     ax.set_ylabel("Latitude (degrees)", fontsize=20)
@@ -183,7 +183,7 @@ def visualize_trajectory(phi_array, theta_array, trajectory_values):
     
     trajectory_values = projected_land_fraction[theta_i, phi_i]
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(12, 5))
     im1 = ax.imshow(projected_land_fraction)
     cbar = fig.colorbar(im1)
     cbar.ax.tick_params(labelsize=15)

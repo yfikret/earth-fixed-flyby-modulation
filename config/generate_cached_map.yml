@@ -1,4 +1,4 @@
 mode: "construct_land_fraction_map"
 
-fraction_map_degree_resolution: 5.0
+fraction_map_degree_resolution: 1.0
 fraction_map_distance: 2.0e4 # km

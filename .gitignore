@@ -3,7 +3,6 @@ scripts/__pycache__
 results_archive
 results/*
 data/kernels/*
-data_surface/cache/*
 !data/kernels/flyby-main.tm
 data/parsed/*
 todo.txt
