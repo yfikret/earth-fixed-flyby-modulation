@@ -70,7 +70,9 @@ Examples:
 ```bash
 python scripts/run_experiment.py --config visualize_trajectory
 ```
-
+```bash
+python scripts/run_experiment.py --config show_maps
+```
 ## Data and Reproducibility
 
 ### Surface Geography Data
