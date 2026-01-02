@@ -1,3 +1,5 @@
+# Note: Run generate_cached_map first
+
 mode: "visualize_trajectory"
 
 trajectory_visualization_flybys: ["GALILEO","JUNO"]
