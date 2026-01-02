@@ -1,0 +1,11 @@
+mode: "run_saturation_test"
+
+saturation_test_plateau_km: 2.0e5
+
+saturation_test_flybys: ["GALILEO", "ROSETTA_2005", "NEAR",
+                        "MESSENGER", "CASSINI", "ROSETTA_2009", "JUNO", 
+                        "GALILEO_2", "ROSETTA_2007"]
+
+weighting_function: "inverse_r_squared"
+#"none", "inverse_r", "inverse_r_squared"
+

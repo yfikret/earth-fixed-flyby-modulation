@@ -1,0 +1,8 @@
+
+mode: "record_coupling_values"
+
+coupling_value_test_flybys: ["GALILEO", "ROSETTA_2005", "NEAR", "MESSENGER", "CASSINI", "ROSETTA_2009", "JUNO", "GALILEO_2", "ROSETTA_2007"]
+
+coupling_value_test_distance_km: 2.0e5
+
+weighting_function: "inverse_r_squared"

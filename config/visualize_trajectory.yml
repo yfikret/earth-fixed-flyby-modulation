@@ -1,0 +1,4 @@
+mode: "visualize_trajectory"
+
+trajectory_visualization_flybys: ["GALILEO","JUNO"]
+trajectory_visualization_distance_km: 2.0e4
