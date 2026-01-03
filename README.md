@@ -1,6 +1,6 @@
 # Earth Flyby Land–Sea Coupling Analysis
 
-This project computes Earth-fixed land–sea coupling metrics from precomputed spacecraft trajectories. It is designed to explore potential correlations between reported spacecraft Earth flyby anomalies and the distribution of land versus ocean visible from the spacecraft in an Earth-fixed frame.
+This project computes Earth-fixed land–sea coupling metrics from precomputed spacecraft trajectories. It is designed to explore potential correlations between reported spacecraft Earth flyby anomalies and the distribution of land versus sea visible from the spacecraft in an Earth-fixed frame.
 
 ## Code Overview
 
@@ -11,7 +11,7 @@ This project computes Earth-fixed land–sea coupling metrics from precomputed s
   Extracts and caches spacecraft position and velocity features from SPICE kernels into compressed `.npz` files.
 
 - `build_landmask.py`  
-  Converts Natural Earth vector geography data into a binary land–ocean mask on a regular latitude–longitude grid.
+  Converts Natural Earth vector geography data into a binary land–sea mask on a regular latitude–longitude grid.
 
 - `get_land_fraction.py`  
   Contains the core mathematical routines for computing visible land fraction. The visible Earth disk is sampled deterministically using a **Fibonacci (golden-angle) lattice** projected onto the Earth’s surface from the spacecraft’s viewpoint.
