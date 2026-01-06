@@ -5,7 +5,7 @@ This repository accompanies the preprint:
 **A Sign-Stable Earth-Fixed Modulation in Earth Flyby Anomalies**  
 Preprints.org, 2026.  
 Preprint link: https://www.preprints.org/manuscript/202601.0115  
-DOI: *pending registration*
+DOI: 10.20944/preprints202601.0115
 
 This project computes Earth-fixed land–sea coupling metrics from precomputed spacecraft trajectories. It is designed to explore potential correlations between reported spacecraft Earth flyby anomalies and the distribution of land versus sea visible from the spacecraft in an Earth-fixed frame.
 
